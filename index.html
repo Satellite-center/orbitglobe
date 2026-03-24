@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ISS Tracker - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a12; color: white; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+    
+    .top-left-controls {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* USB 연결 버튼 디자인 (배경과 어울리게) */
+.usb-connect-btn {
+  background: rgba(15, 52, 96, 0.8);
+  border: 1px solid #00d2ff;
+  color: #00d2ff;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+  backdrop-filter: blur(5px); /* 뒤 배경 살짝 비치게 */
+}
+
+/* 미니 지구본 아이콘 */
+.mini-globe {
+  width: 24px;
+  height: 24px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2300d2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+
+    /* 1. 가장 왼쪽 사이드바 영역 */
+    .side-bar { 
+      width: 4vw;           /* 화면 너비의 4%를 차지 */
+      min-width: 50px;      /* 너무 작아져서 글자가 깨지는 것 방지 */
+      max-width: 80px;      /* 너무 커져서 자리를 많이 차지하는 것 방지 */
+      background-color: #08080e; 
+      border-right: 1px solid #16213e; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+    }
+    .vertical-title { 
+  /* 기존 transform: rotate(-90deg)는 삭제합니다 */
+  writing-mode: vertical-lr;      /* 세로 방향 쓰기 설정 */
+  text-orientation: upright;      /* 글자 방향을 똑바로 세움 */
+  color: #00d2ff; 
+  font-weight: bold; 
+  /* 2.0rem 대신 vw 단위를 쓰면 화면 크기에 비례해서 글자가 커집니다 */
+    font-size: 1.8vw;     
+    min-size: 2.0rem;     /* 최소 글자 크기 보장 */
+  letter-spacing: 5px;            /* 글자 사이 간격 (위아래 간격이 됩니다) */
+  text-transform: uppercase;      /* 대문자 고정 */
+  opacity: 0.9;
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.5); /* 은은한 네온 효과 추가 */
+}
+
+    /* 전체 화면 가로 분할 컨테이너 (사이드바 제외 영역) */
+    .main-container { display: flex; flex: 1; height: 100vh; flex-wrap: nowrap; }
+    
+    /* 왼쪽 섹션 (시각 정보) */
+    .info-panel { flex: 1; min-width: 450px; padding: 2vw; /* 고정 px 대신 화면 너비에 비례한 여백을 줍니다 */ background: linear-gradient(180deg, #16213e 0%, #0a0a12 100%); 
+                  border-right: 2px solid #00d2ff; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+                  gap: 2vh; /* [꿀팁] 요소들 사이의 위아래 간격을 화면 높이에 비례해서 벌려줍니다 */}
+    
+    /* 오른쪽 섹션 (제어판) */
+    .control-panel { flex: 1; min-width: 450px; padding: 2vw; /* 고정 px 대신 화면 너비에 비례한 여백을 줍니다 */ display: flex; flex-direction: column; 
+    align-items: center; justify-content: center; 
+    gap: 2vh; /* [꿀팁] 요소들 사이의 위아래 간격을 화면 높이에 비례해서 벌려줍니다 */}
+
+    /* 이미지 박스: 지도 크기(360x180)와 동일하게 수정 */
+    .iss-img-box { width: 30vw;    /* 360px 대신 화면 너비의 35%만큼 커지게 설정 */
+    height: 15vw;   /* 비율을 유지하며 함께 확대 */
+    max-width: 600px; /* 너무 무한정 커지는 것 방지 */
+    min-width: 360px; /* 노트북 이하에서는 원본 크기 유지 */ background-color: #000;  /* 배경을 검은색으로 설정 */
+  /* background 속성에서 url 부분을 지우고 아래처럼 설정합니다 */
+  background-position: center;
+  background-size: cover; 
+                   border-radius: 5px; border: 1px solid #00d2ff; transition: 0.5s; }
+    .target-label { font-size: 1.4rem; font-weight: bold; color: #ffca28; margin: 15px 0; background: rgba(0,210,255,0.1); padding: 8px 25px; border-radius: 20px; border: 1px solid rgba(0,210,255,0.3); }
+
+    /* 미니 지도 칸 */
+    .map-container { width: 30vw;    /* 360px 대신 화면 너비의 35%만큼 커지게 설정 */
+    height: 15vw;   /* 비율을 유지하며 함께 확대 */
+    max-width: 600px; /* 너무 무한정 커지는 것 방지 */
+    min-width: 360px; /* 노트북 이하에서는 원본 크기 유지 */ background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/1280px-Blue_Marble_2002.png?20230723103457') center/cover;
+                     position: relative; border-radius: 5px; border: 1px solid #aaa; margin: 15px 0; background-size: 100% 100%; }
+    .iss-point { width: 12px; height: 12px; background-color: #ff0000; border: 2px solid white; border-radius: 50%; position: absolute; 
+                 box-shadow: 0 0 10px #ff0000; transform: translate(-50%, -50%); z-index: 10; 
+                 transition: left 0.5s linear, top 0.5s linear;}
+
+    /* 수치 표시 */
+    .coords-display { font-size: 1.5rem; font-weight: bold; color: #00d2ff; margin-bottom: 5px; }
+    
+    /* 슬라이더 및 버튼 스타일 (기존과 동일) */
+    .slidecontainer { width: 85%; background: #16213e; padding: 20px; border-radius: 12px; margin: 12px 0; border: 1px solid #0f3460; }
+    .slider-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
+    .slider-title { font-size: 1.1rem; font-weight: bold; color: #00d2ff; }
+    .slider-range { font-size: 0.9rem; color: #888; font-weight: bold; }
+    .slider { width: 100%; -webkit-appearance: none; height: 10px; background: #0f3460; border-radius: 5px; outline: none; }
+    .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #00d2ff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px #00d2ff; }
+    .button { background: #0f3460; border: 2px solid #00d2ff; color: white; padding: 12px 25px; border-radius: 25px; cursor: pointer; margin: 8px; font-weight: bold; transition: 0.3s; }
+    .button:hover { background: #00d2ff; color: #0a0a12; transform: scale(1.05); }
+  </style>
+</head>
+<body>
+
+<div class="side-bar">
+  <div class="vertical-title">ORBIT GLOBE</div>
+</div>
+
+<div class="main-container">
+  <div class="info-panel" style="position: relative;"> 
+<div class="top-left-controls">
+      <button class="usb-connect-btn" onclick="connectSerial()">USB 연결</button>
+     </div>
+    <h2>📡 위성 정보 센터</h2>
+    <div class="iss-img-box" id="targetImg"></div>
+    <div class="target-label" id="targetName">대기 모드</div>
+    
+    <div class="coords-display">
+      위도: <span id="latTxt">0</span>° | 경도: <span id="lonTxt">0</span>°
+    </div>
+    <div class="map-container">
+      <div id="issMarker" class="iss-point" style="left: 50%; top: 50%;"></div>
+    </div>
+    <p style="color: #888;">위성 위치 지도</p>
+  </div>
+
+  <div class="control-panel">
+    <h2>🛠️ 위성 제어 센터</h2>
+    
+    <div class="slidecontainer">
+      <div class="slider-header">
+        <span class="slider-range">-55</span>
+        <span class="slider-title">위도: <span id="latDisplay">0</span>°</span>
+        <span class="slider-range">75</span>
+      </div>
+      <input type="range" min="-55" max="75" value="0" class="slider" id="latSlider" oninput="previewUI()">
+    </div>
+
+    <div class="slidecontainer">
+      <div class="slider-header">
+        <span class="slider-range">-180</span>
+        <span class="slider-title">경도: <span id="lonDisplay">0</span>°</span>
+        <span class="slider-range">180</span>
+      </div>
+      <input type="range" min="-180" max="180" value="0" class="slider" id="lonSlider" oninput="previewUI()">
+    </div>
+
+    <div>
+      <button class="button" onclick="sendManualCommand()">위성 수동 제어</button>
+      <button class="button" style="border-color: #ff4d4d;" onclick="resetPos()">초기화</button>
+    </div>
+
+    <hr style="width:80%; border: 0.5px solid #0f3460; margin: 20px 0 5px 0;">
+
+    <div style="display: flex; gap: 60px; align-items: flex-end; width: 85%; margin: 20px auto 0 auto;  justify-content: center;">
+  
+  <div style="display: flex; flex-direction: column; gap: 10px; width: 45%;">
+    <button class="button" style="border-color: #a29bfe; width: 100%;" onclick="startMode('orbit', '궤도 운동 재현')">🔄 ISS 공전 궤도 재현 모드</button>
+    <button class="button" style="border-color: #00d2ff; width: 100%;" onclick="startMode('equator', '적도 공전 모드')">🌍 적도 위도 공전 모드</button>
+    <button class="button" style="border-color: #ff9f43; width: 100%;" onclick="startMode('korea orbit', '37도 위도 공전')">🇰🇷 37도 위도 공전 모드</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 30%;">
+    <div style="width: 100%; height: 160px; border-radius: 8px; overflow: hidden; border: 1px solid #444; background-color: #000;">
+      <img src="issproject/naro.jpg" style="width: 100%; height: 100%; object-fit: cover;">
+    </div>
+    
+    <input type="file" id="imageUpload" accept="image/*" onchange="uploadUserImage(event)" style="display: none;">
+    <button class="button" onclick="document.getElementById('imageUpload').click()" style="background-color: #e74c3c; color: #ffffff; border: none; font-size: 11px; width: 100%; padding: 8px 0; border-radius: 20px; cursor: pointer;">
+      🚀 나의 위성 띄우기
+    </button>
+  </div>
+</div>
+
+    <p id="modeStatus" style="margin-top: 20px; color: #00ff00;">● 대기 중</p>
+  </div>
+</div>
+
+<script>
+  let port;
+  let reader;
+  let inputBuffer = ""; // 시리얼 데이터를 모으는 버퍼
+  let autoUpdateInterval;
+  let isUserAdjusting = false;
+
+  // 1. [추가] USB 시리얼 연결 함수
+  async function connectSerial() {
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+      
+      document.getElementById('modeStatus').innerText = "● USB 연결 성공";
+      document.getElementById('modeStatus').style.color = "#00ff00";
+      
+      readLoop(); // 데이터 읽기 루프 시작
+    } catch (err) {
+      console.error("연결 실패:", err);
+      alert("USB 장치를 선택하지 않았거나 연결에 실패했습니다.");
+    }
+  }
+
+  // 2. [추가] ESP32에서 보내는 데이터를 실시간으로 읽는 루프
+  async function readLoop() {
+    const textDecoder = new TextDecoderStream();
+    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    reader = textDecoder.readable.getReader();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) {
+        inputBuffer += value;
+        // 한 줄(\n)이 완성되었는지 확인
+        if (inputBuffer.includes("\n")) {
+          let lines = inputBuffer.split("\n");
+          inputBuffer = lines.pop(); // 마지막 미완성 줄은 버퍼에 남김
+          
+          lines.forEach(line => {
+            if (line.trim().startsWith("{")) {
+              try {
+                const data = JSON.parse(line);
+                if (!isUserAdjusting) {
+                  updateUIFromSerial(data.lat, data.lon);
+                }
+              } catch (e) { }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // 3. [추가] ESP32로 명령을 보내는 통합 함수 (기존 fetch 대체)
+  async function sendToESP(commandObj) {
+    if (port && port.writable) {
+      const encoder = new TextEncoder();
+      const writer = port.writable.getWriter();
+      const jsonStr = JSON.stringify(commandObj) + "\n";
+      await writer.write(encoder.encode(jsonStr));
+      writer.releaseLock();
+    } else {
+      console.warn("USB가 연결되지 않았습니다.");
+    }
+  }
+
+  // 4. [기존 로직 유지] 지도를 업데이트하는 함수
+  function updateUIFromSerial(lat, lon) {
+    lat = parseFloat(lat);
+    lon = parseFloat(lon);
+    if (isNaN(lat)) lat = 0;
+    if (isNaN(lon)) lon = 0;
+
+    lat = Math.max(-90, Math.min(90, lat));
+    lon = Math.max(-180, Math.min(180, lon));
+
+    document.getElementById('latTxt').innerText = lat.toFixed(2);
+    document.getElementById('lonTxt').innerText = lon.toFixed(2);
+
+    let xPercent = ((lon + 180) / 360) * 100;
+    let yPercent = 100 - ((lat + 90) / 180) * 100;
+    let marker = document.getElementById('issMarker');
+    marker.style.left = xPercent + "%";
+    marker.style.top = yPercent + "%";
+  }
+
+  // 5. [기존 함수 수정] 모드 시작
+  function startMode(mode, name) {
+    isUserAdjusting = false;
+    const targetName = document.getElementById('targetName');
+    const targetImg = document.getElementById('targetImg');
+    const statusText = document.getElementById('modeStatus');
+
+    targetName.innerText = name;
+    statusText.innerText = "● " + name + " 모드 활성화";
+    
+    // 이미지 설정 로직 그대로 유지
+    if (mode === 'orbit') {
+      targetImg.style.backgroundImage = "url('issproject/iss.jpg')";
+      statusText.style.color = "#a29bfe";
+      sendToESP({mode: 3}); // ISS 궤도 재현
+    } else if (mode === 'equator') {
+      sendToESP({mode: 4}); // 적도 공전
+    } else if (mode === 'korea orbit') {
+      sendToESP({mode: 5}); // 37도 공전
+    }
+  }
+
+ // 6. [수정] 함수 이름을 sendManualCommand로 변경!
+function sendManualCommand() { 
+  isUserAdjusting = false;
+  let lat = document.getElementById('latSlider').value;
+  let lon = document.getElementById('lonSlider').value;
+
+  document.getElementById('targetName').innerText = "수동 조작 모드";
+  document.getElementById('modeStatus').innerText = "● 위성 이동 중... (동기화 중)";
+  document.getElementById('modeStatus').style.color = "#00d2ff";
+
+  // 진짜 데이터를 보내는 300번 줄의 sendToESP 함수를 호출함
+  sendToESP({mode: 1, tLat: parseInt(lat), tLon: parseInt(lon)});
+}
+
+  // 7. [기존 함수 수정] 초기화
+  function resetPos() {
+    isUserAdjusting = false;
+    document.getElementById('latSlider').value = 0;
+    document.getElementById('lonSlider').value = 0;
+    document.getElementById('latDisplay').innerText = "0";
+    document.getElementById('lonDisplay').innerText = "0";
+    document.getElementById('targetName').innerText = "대기 모드";
+    document.getElementById('targetImg').style.backgroundImage = "none";
+    document.getElementById('targetImg').style.backgroundColor = "#000";
+
+    // 초기화 명령(mode 0) 전송
+    sendToESP({mode: 0, tLat: 0, tLon: 0, reset: 1});
+
+    document.getElementById('modeStatus').innerText = "● 시스템 대기 중 (원점 복귀)";
+    document.getElementById('modeStatus').style.color = "#ff4d4d";
+  }
+
+  function previewUI() {
+    isUserAdjusting = true;
+    let lat = document.getElementById('latSlider').value;
+    let lon = document.getElementById('lonSlider').value;
+    document.getElementById('latDisplay').innerText = lat;
+    document.getElementById('lonDisplay').innerText = lon;
+  }
+
+function uploadUserImage(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // 위쪽 '위성 정보 센터'의 이미지 박스 ID가 'targetImg'인지 확인해 주세요!
+      const targetImg = document.getElementById('targetImg');
+      const targetName = document.getElementById('targetName');
+      
+      if(targetImg) {
+        targetImg.style.backgroundImage = "url('" + e.target.result + "')";
+        targetImg.style.backgroundSize = "cover";
+        targetImg.style.backgroundPosition = "center";
+      }
+      
+      if(targetName) {
+        targetName.innerText = "나만의 커스텀 위성";
+      }
+      
+      // 상태 메시지도 업데이트
+      const statusText = document.getElementById('modeStatus');
+      if(statusText) {
+        statusText.innerText = "● 커스텀 위성 운용 중";
+        statusText.style.color = "#ff6b6b";
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+</script>
+</body>
+</html>
