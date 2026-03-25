@@ -196,6 +196,9 @@
   let autoUpdateInterval;
   let isUserAdjusting = false;
 
+  let isCustomImageUploaded = false; // 커스텀 이미지 업로드 여부 저장
+  let customImageUrl = "";           // 업로드된 이미지 데이터 저장
+  
   // 1. [추가] USB 시리얼 연결 함수
   async function connectSerial() {
     try {
@@ -286,19 +289,32 @@
     targetName.innerText = name;
     statusText.innerText = "● " + name + " 모드 활성화";
     
-    // 이미지 설정 로직 그대로 유지
+    // [수정] 사용자가 이미지를 올리지 않았을 때만 기본 이름/이미지 적용
+  if (!isCustomImageUploaded) {
+    targetName.innerText = name;
     if (mode === 'orbit') {
       targetImg.style.backgroundImage = "url('issproject/iss.jpg')";
-      statusText.style.color = "#a29bfe";
-      sendToESP({mode: 3}); // ISS 궤도 재현
     } else if (mode === 'equator') {
       targetImg.style.backgroundImage = "url('issproject/equator.jpg')";
-      sendToESP({mode: 4}); // 적도 공전
     } else if (mode === 'korea orbit') {
       targetImg.style.backgroundImage = "url('issproject/37latitude.jpg')";
-      sendToESP({mode: 5}); // 37도 공전
     }
+  } else {
+    // 이미지를 올린 상태라면 이름만 살짝 바꿔줍니다 (예: 커스 위성 - 적도 공전 중)
+    targetName.innerText = "커스텀 위성 (" + name + ")";
   }
+
+  // 상태 메시지와 명령 전송은 이미지와 상관없이 실행되어야 함
+  statusText.innerText = "● " + name + " 모드 활성화";
+  if (mode === 'orbit') {
+    statusText.style.color = "#a29bfe";
+    sendToESP({mode: 3});
+  } else if (mode === 'equator') {
+    sendToESP({mode: 4});
+  } else if (mode === 'korea orbit') {
+    sendToESP({mode: 5});
+  }
+}
 
  // 6. [수정] 함수 이름을 sendManualCommand로 변경!
 function sendManualCommand() { 
@@ -317,6 +333,7 @@ function sendManualCommand() {
   // 7. [기존 함수 수정] 초기화
   function resetPos() {
     isUserAdjusting = false;
+    isCustomImageUploaded = false; // [추가] 커스텀 이미지 사용 해제!
     document.getElementById('latSlider').value = 0;
     document.getElementById('lonSlider').value = 0;
     document.getElementById('latDisplay').innerText = "0";
@@ -345,6 +362,10 @@ function uploadUserImage(event) {
   if (file) {
     const reader = new FileReader();
     reader.onload = function(e) {
+
+      // 1. [추가] 이제부터 커스텀 이미지를 사용한다고 표시합니다!
+      isCustomImageUploaded = true;
+      
       // 위쪽 '위성 정보 센터'의 이미지 박스 ID가 'targetImg'인지 확인해 주세요!
       const targetImg = document.getElementById('targetImg');
       const targetName = document.getElementById('targetName');
@@ -356,13 +377,13 @@ function uploadUserImage(event) {
       }
       
       if(targetName) {
-        targetName.innerText = "나만의 커스텀 위성";
+        targetName.innerText = "커스텀 위성";
       }
       
       // 상태 메시지도 업데이트
       const statusText = document.getElementById('modeStatus');
       if(statusText) {
-        statusText.innerText = "● 커스텀 위성 운용 중";
+        statusText.innerText = "● 커스텀 위성 등록 완";
         statusText.style.color = "#ff6b6b";
       }
     };
