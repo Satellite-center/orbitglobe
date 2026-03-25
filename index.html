@@ -111,6 +111,25 @@
     .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #00d2ff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px #00d2ff; }
     .button { background: #0f3460; border: 2px solid #00d2ff; color: white; padding: 12px 25px; border-radius: 25px; cursor: pointer; margin: 8px; font-weight: bold; transition: 0.3s; }
     .button:hover { background: #00d2ff; color: #0a0a12; transform: scale(1.05); }
+    /* '나의 위성 띄우기' 버튼 전용 스타일 (기존 .button 하단에 추가) */
+.button-green { 
+    background: #0f3d2e;      /* 쨍하지 않은 짙은 초록 배경 */
+    border: 2px solid #33cc99; /* 에메랄드빛 초록 테두리 */
+    color: white; 
+    padding: 12px 25px; 
+    border-radius: 25px; 
+    cursor: pointer; 
+    margin: 8px; 
+    font-weight: bold; 
+    transition: 0.3s; 
+}
+
+/* 마우스를 올렸을 때 (Hover) */
+.button-green:hover { 
+    background: #33cc99;      /* 테두리 색으로 배경 채우기 */
+    color: #0a0a12;           /* 글자색은 어둡게 반전 */
+    transform: scale(1.05);   /* 살짝 커지는 효과 동일 적용 */
+}
   </style>
 </head>
 <body>
@@ -179,7 +198,7 @@
     </div>
     
     <input type="file" id="imageUpload" accept="image/*" onchange="uploadUserImage(event)" style="display: none;">
-    <button class="button" onclick="document.getElementById('imageUpload').click()" style="background-color: #e74c3c; color: #ffffff; border: none; font-size: 11px; width: 100%; padding: 8px 0; border-radius: 20px; cursor: pointer;">
+    <button class="button-green" onclick="document.getElementById('imageUpload').click()" style="width: 100%; font-size: 11px;">
       🚀 나의 위성 띄우기
     </button>
   </div>
