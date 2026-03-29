@@ -214,17 +214,50 @@
   let inputBuffer = ""; // 시리얼 데이터를 모으는 버퍼
   let autoUpdateInterval;
   let isUserAdjusting = false;
+  let isLocked = true; // [수정] 처음부터 잠긴 상태로 시작합니다!
 
   let isCustomImageUploaded = false; // 커스텀 이미지 업로드 여부 저장
   let customImageUrl = "";           // 업로드된 이미지 데이터 저장
+
+  // --- [신규 추가] 시스템 잠금 및 해제 함수 ---
+function controlLock(isLockedNow) {
+  isLocked = isLockedNow; // 전역 변수 상태 업데이트
   
+  // 모든 버튼과 슬라이더를 가져옵니다.
+  const buttons = document.querySelectorAll('button');
+  const sliders = document.querySelectorAll('.slider');
+  const statusText = document.getElementById('modeStatus');
+
+  buttons.forEach(btn => {
+    // 'USB 연결' 버튼은 다시 눌러야 할 수도 있으니 제외하고 나머지만 잠급니다.
+    if (!btn.classList.contains('usb-connect-btn')) {
+      btn.disabled = isLockedNow;
+      btn.style.opacity = isLockedNow ? "0.5" : "1.0";
+      btn.style.cursor = isLockedNow ? "not-allowed" : "pointer";
+    }
+  });
+
+  sliders.forEach(s => {
+    s.disabled = isLockedNow;
+  });
+
+  // 상태 메시지 표시
+  if (isLockedNow) {
+    statusText.innerText = "● [SYSTEM BUSY] 명령 처리 중...";
+    statusText.style.color = "#ffca28"; // 대기 중인 노란색
+  }
+}
+   
   // 1. [추가] USB 시리얼 연결 함수
   async function connectSerial() {
     try {
       port = await navigator.serial.requestPort();
       await port.open({ baudRate: 115200 });
       
-      document.getElementById('modeStatus').innerText = "● USB 연결 성공";
+      // 연결되자마자 잠금 함수 실행!
+      controlLock(true);
+      
+      document.getElementById('modeStatus').innerText = "● 시스템 부팅 및 원점 복귀 중...";
       document.getElementById('modeStatus').style.color = "#00ff00";
       
       readLoop(); // 데이터 읽기 루프 시작
@@ -254,8 +287,37 @@
             if (line.trim().startsWith("{")) {
               try {
                 const data = JSON.parse(line);
+                const statusText = document.getElementById('modeStatus');
+
+                // 1. 아두이노가 보낸 상세 메시지가 있다면 화면에 즉시 반영
+                if (data.msg) {
+                  // [신규 추가] 아두이노의 상세 상태를 텍스트로 표시
+                  statusText.innerText = "● " + data.msg;
+
+                 // 1순위: 'Ready'나 '완료'면 무조건 초록색 (가장 중요)
+    if (data.msg === "Ready" || data.msg.includes("완료") || data.msg.includes("완주")) {
+        statusText.style.color = "#00ff00"; 
+        if (data.msg === "Ready") controlLock(false);
+    } 
+    // 2순위: '준비'나 '대기'가 들어있으면 노란색
+    else if (data.msg.includes("준비") || data.msg.includes("대기")) {
+        statusText.style.color = "#ffcc00"; 
+    }
+    // 3순위: 그 외 '시작'이나 '주행'은 초록색
+    else if (data.msg.includes("진행")) {
+        statusText.style.color = "#ff6b6b";
+    }
+                  
+                // [추가] 1. 아두이노가 "나 이제 준비됐어"라고 하면 잠금 해제!
+                if (data.msg === "Ready") {
+                  console.log(">>> 시스템 잠금 해제 (Ready 신호 수신)");
+                  controlLock(false); 
+                  return; // Ready 메시지일 때는 아래 지도 업데이트를 건너뜁니다.
+                }
+                if (data.lat !== undefined && data.lon !== undefined) {
                 if (!isUserAdjusting) {
                   updateUIFromSerial(data.lat, data.lon);
+                }
                 }
               } catch (e) { }
             }
@@ -267,7 +329,12 @@
 
   // 3. [추가] ESP32로 명령을 보내는 통합 함수 (기존 fetch 대체)
   async function sendToESP(commandObj) {
+    // 이미 잠겨있다면 중복 명령 방지
+  if (isLocked) return;
+    
     if (port && port.writable) {
+      // [이 줄이 핵심!] 명령 보내자마자 바로 잠금 메시지 띄우기
+    controlLock(true);
       const encoder = new TextEncoder();
       const writer = port.writable.getWriter();
       const jsonStr = JSON.stringify(commandObj) + "\n";
@@ -339,6 +406,7 @@
 
  // 6. [수정] 함수 이름을 sendManualCommand로 변경!
 function sendManualCommand() { 
+  if (isLocked) return; // 이미 시스템이 바쁘면 클릭 무시
   isUserAdjusting = false;
   let lat = document.getElementById('latSlider').value;
   let lon = document.getElementById('lonSlider').value;
@@ -346,6 +414,10 @@ function sendManualCommand() {
   document.getElementById('targetName').innerText = "수동 조작 모드";
   document.getElementById('modeStatus').innerText = "● 위성 이동 중... (동기화 중)";
   document.getElementById('modeStatus').style.color = "#00d2ff";
+  
+  // 2. [핵심] 시스템 잠금 함수 호출! 
+  // 이 안에서 메시지도 "● [SYSTEM BUSY]..."로 바뀌고 버튼도 어두워집니다.
+  controlLock(true);
 
   // 진짜 데이터를 보내는 300번 줄의 sendToESP 함수를 호출함
   sendToESP({mode: 1, tLat: parseInt(lat), tLon: parseInt(lon)});
