@@ -4,7 +4,23 @@
   <title>ISS Tracker - Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a12; color: white; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a12; color: white; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; 
+         -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;}
+
+    /* 2. 하지만 입력창(input)이나 버튼들은 정상 작동해야 하므로 예외 처리합니다. */
+input, button, .slider {
+    -webkit-user-select: auto;
+    user-select: auto;
+}
+    /* 4. 지도가 있는 칸도 드래그해서 이미지가 따라오지 않게 방지 */
+.map-container, .iss-img-box {
+    -webkit-user-drag: none;
+    pointer-events: none; /* 지도는 클릭할 일이 없으므로 클릭 자체를 통과시킵니다. */
+}
     
     .top-left-controls {
   position: absolute;
@@ -34,6 +50,7 @@
   /* [추가] 확실한 클릭 보장 */
   cursor: pointer !important;
   pointer-events: auto !important;
+  user-select: none;
 }
 
 /* 미니 지구본 아이콘 */
