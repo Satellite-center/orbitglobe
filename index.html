@@ -13,6 +13,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+      z-index: 9999 !important; /* 숫자를 아주 크게 높여서 무조건 맨 앞으로 */
+  pointer-events: auto !important; /* 자기 자신은 클릭 가능하게 */
 }
 
 /* USB 연결 버튼 디자인 (배경과 어울리게) */
@@ -27,6 +29,9 @@
   cursor: pointer;
   transition: 0.3s;
   backdrop-filter: blur(5px); /* 뒤 배경 살짝 비치게 */
+  /* [추가] 확실한 클릭 보장 */
+  cursor: pointer !important;
+  pointer-events: auto !important;
 }
 
 /* 미니 지구본 아이콘 */
@@ -71,7 +76,9 @@
     /* 왼쪽 섹션 (시각 정보) */
     .info-panel { flex: 1; min-width: 450px; padding: 2vw; /* 고정 px 대신 화면 너비에 비례한 여백을 줍니다 */ background: linear-gradient(180deg, #16213e 0%, #0a0a12 100%); 
                   border-right: 2px solid #00d2ff; display: flex; flex-direction: column; align-items: center; justify-content: center; 
-                  gap: 2vh; /* [꿀팁] 요소들 사이의 위아래 간격을 화면 높이에 비례해서 벌려줍니다 */}
+                  gap: 2vh; /* [꿀팁] 요소들 사이의 위아래 간격을 화면 높이에 비례해서 벌려줍니다 */
+                /* 기존 속성에 아래 한 줄만 추가하세요 */
+  z-index: 1;}
     
     /* 오른쪽 섹션 (제어판) */
     .control-panel { flex: 1; min-width: 450px; padding: 2vw; /* 고정 px 대신 화면 너비에 비례한 여백을 줍니다 */ display: flex; flex-direction: column; 
@@ -141,7 +148,7 @@
 <div class="main-container">
   <div class="info-panel" style="position: relative;"> 
 <div class="top-left-controls">
-      <button class="usb-connect-btn" onclick="connectSerial()" style="pointer-events: auto !important; cursor: pointer !important;">USB 연결</button>
+      <button class="usb-connect-btn" onclick="connectSerial()">USB 연결</button>
      </div>
     <h2>📡 위성 정보 센터</h2>
     <div class="iss-img-box" id="targetImg"></div>
