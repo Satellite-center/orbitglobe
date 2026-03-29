@@ -323,8 +323,7 @@ function controlLock(isLockedNow) {
                   // Ready 신호면 잠금 해제 후 종료
                   if (data.msg === "Ready") {
                     console.log(">>> 시스템 잠금 해제 (Ready 신호 수신)");
-                    controlLock(false); 
-                    return; 
+                    controlLock(false);
                   }
                 }
 
