@@ -346,8 +346,6 @@ function controlLock(isLockedNow) {
 
   // 3. [추가] ESP32로 명령을 보내는 통합 함수 (기존 fetch 대체)
   async function sendToESP(commandObj) {
-    // 이미 잠겨있다면 중복 명령 방지
-  if (isLocked) return;
     
     if (port && port.writable) {
       // [이 줄이 핵심!] 명령 보내자마자 바로 잠금 메시지 띄우기
@@ -429,7 +427,7 @@ function sendManualCommand() {
   let lon = document.getElementById('lonSlider').value;
 
   document.getElementById('targetName').innerText = "수동 조작 모드";
-  document.getElementById('modeStatus').innerText = "● 위성 이동 중... (동기화 중)";
+  
   document.getElementById('modeStatus').style.color = "#00d2ff";
   
   // 2. [핵심] 시스템 잠금 함수 호출! 
