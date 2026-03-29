@@ -328,8 +328,6 @@ if (data.msg) {
   // [수정] 들어온 영문 메시지를 한글로 치환
   if (displayMsg === "Ready") {
     displayMsg = "대기 중";
-  } else if (displayMsg === "Resetting to Home...") {
-    displayMsg = "초기화 중";
   }
 
   statusText.innerText = "● " + displayMsg; // 화면에는 한글로 표시
@@ -478,6 +476,11 @@ function sendManualCommand() {
     document.getElementById('targetName').innerText = "대기 모드";
     document.getElementById('targetImg').style.backgroundImage = "none";
     document.getElementById('targetImg').style.backgroundColor = "#000";
+
+    // --- [여기서부터 메시지 제어] ---
+    const statusText = document.getElementById('modeStatus');
+    statusText.innerText = "● 초기화 중"; // 아두이노 응답 기다리지 않고 즉시 표시
+    statusText.style.color = "#ff4d4d";   // 버튼 테두리와 맞춘 빨간색
 
     // 초기화 명령(mode 0) 전송
     sendToESP({mode: 0, tLat: 0, tLon: 0, reset: 1});
