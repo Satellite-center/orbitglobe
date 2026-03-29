@@ -263,19 +263,36 @@ function controlLock(isLockedNow) {
   }
 }
    
-  // 1. [추가] USB 시리얼 연결 함수
+  // 1. [최종 수정] USB 시리얼 연결 함수
   async function connectSerial() {
     try {
       port = await navigator.serial.requestPort();
       await port.open({ baudRate: 115200 });
       
-      // 연결되자마자 잠금 함수 실행!
+      // 1. 일단 잠금 상태로 설정
       controlLock(true);
       
       document.getElementById('modeStatus').innerText = "● 시스템 부팅 및 원점 복귀 중...";
       document.getElementById('modeStatus').style.color = "#00ff00";
       
-      readLoop(); // 데이터 읽기 루프 시작
+      // 2. 데이터 읽기 루프 시작 (돋보기를 들고 대기 시작)
+      readLoop(); 
+
+      // 3. [핵심 추가] 아두이노가 리셋될 시간을 벌어주고(1초), 수동으로 초기화 명령 전송
+      // 이렇게 하면 아두이노가 리셋되면서 보낸 첫 Ready를 놓쳤더라도, 
+      // 이 명령을 받고 두 번째 Ready를 확실히 보내게 됩니다.
+      setTimeout(async () => {
+        if (port && port.writable) {
+          const encoder = new TextEncoder();
+          const writer = port.writable.getWriter();
+          // 아두이노에게 모드 0(초기화) 명령을 강제로 보냄
+          const initCmd = JSON.stringify({mode: 0, tLat: 0, tLon: 0}) + "\n";
+          await writer.write(encoder.encode(initCmd));
+          writer.releaseLock();
+          console.log("연결 확인을 위한 강제 초기화 명령 전송");
+        }
+      }, 1000); // 1000ms = 1초 대기
+
     } catch (err) {
       console.error("연결 실패:", err);
       alert("USB 장치를 선택하지 않았거나 연결에 실패했습니다.");
