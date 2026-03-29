@@ -282,7 +282,7 @@ function controlLock(isLockedNow) {
     }
   }
 
-  // 2. [추가] ESP32에서 보내는 데이터를 실시간으로 읽는 루프
+  // 2. [수정 완료] ESP32 데이터 읽기 루프
   async function readLoop() {
     const textDecoder = new TextDecoderStream();
     const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
@@ -293,10 +293,10 @@ function controlLock(isLockedNow) {
       if (done) break;
       if (value) {
         inputBuffer += value;
-        // 한 줄(\n)이 완성되었는지 확인
+        
         if (inputBuffer.includes("\n")) {
           let lines = inputBuffer.split("\n");
-          inputBuffer = lines.pop(); // 마지막 미완성 줄은 버퍼에 남김
+          inputBuffer = lines.pop();
           
           lines.forEach(line => {
             if (line.trim().startsWith("{")) {
@@ -304,42 +304,44 @@ function controlLock(isLockedNow) {
                 const data = JSON.parse(line);
                 const statusText = document.getElementById('modeStatus');
 
-                // 1. 아두이노가 보낸 상세 메시지가 있다면 화면에 즉시 반영
+                // --- 1. 메시지 처리 ---
                 if (data.msg) {
-                  // [신규 추가] 아두이노의 상세 상태를 텍스트로 표시
                   statusText.innerText = "● " + data.msg;
 
-                 // 1순위: 'Ready'나 '완료'면 무조건 초록색 (가장 중요)
-    if (data.msg === "Ready" || data.msg.includes("완료") || data.msg.includes("완주")) {
-        statusText.style.color = "#00ff00"; 
-        if (data.msg === "Ready") controlLock(false);
-    } 
-    // 2순위: '준비'나 '대기'가 들어있으면 노란색
-    else if (data.msg.includes("준비") || data.msg.includes("대기")) {
-        statusText.style.color = "#ffcc00"; 
-    }
-    // 3순위: 그 외 '시작'이나 '주행'은 초록색
-    else if (data.msg.includes("진행")) {
-        statusText.style.color = "#ff6b6b";
-    }
-                  
-                // [추가] 1. 아두이노가 "나 이제 준비됐어"라고 하면 잠금 해제!
-                if (data.msg === "Ready") {
-                  console.log(">>> 시스템 잠금 해제 (Ready 신호 수신)");
-                  controlLock(false); 
-                  return; // Ready 메시지일 때는 아래 지도 업데이트를 건너뜁니다.
+                  // 상태별 색상 변경
+                  if (data.msg === "Ready" || data.msg.includes("완료") || data.msg.includes("완주")) {
+                    statusText.style.color = "#00ff00"; 
+                    if (data.msg === "Ready") controlLock(false);
+                  } 
+                  else if (data.msg.includes("준비") || data.msg.includes("대기")) {
+                    statusText.style.color = "#ffcc00"; 
+                  } 
+                  else if (data.msg.includes("진행")) {
+                    statusText.style.color = "#ff6b6b";
+                  }
+
+                  // Ready 신호면 잠금 해제 후 종료
+                  if (data.msg === "Ready") {
+                    console.log(">>> 시스템 잠금 해제 (Ready 신호 수신)");
+                    controlLock(false); 
+                    return; 
+                  }
                 }
+
+                // --- 2. 좌표 처리 ---
                 if (data.lat !== undefined && data.lon !== undefined) {
-                if (!isUserAdjusting) {
-                  updateUIFromSerial(data.lat, data.lon);
+                  if (!isUserAdjusting) {
+                    updateUIFromSerial(data.lat, data.lon);
+                  }
                 }
-                }
-              } catch (e) { }
-            }
-          });
-        }
-      }
-    }
+              } catch (e) { 
+                console.log("JSON 파싱 에러:", e); 
+              }
+            } // if startsWith("{") 끝
+          }); // forEach 끝
+        } // if includes("\n") 끝
+      } // if value 끝
+    } // while 끝
   }
 
   // 3. [추가] ESP32로 명령을 보내는 통합 함수 (기존 fetch 대체)
