@@ -142,6 +142,15 @@
     color: #0a0a12;           /* 글자색은 어둡게 반전 */
     transform: scale(1.05);   /* 살짝 커지는 효과 동일 적용 */
 }
+
+    /* 슬라이더와 제어판 요소들이 '드래그 대상'이 되지 않도록 강제 설정 */
+.control-panel, .slidecontainer, .slider {
+    -webkit-user-select: none;  /* Safari */
+    -ms-user-select: none;      /* IE/Edge */
+    user-select: none;          /* 표준: 글자 선택 방지 */
+    -webkit-user-drag: none;    /* 요소 드래그 방지 (금지 표시 원인 제거) */
+}
+    
   </style>
 </head>
 <body>
