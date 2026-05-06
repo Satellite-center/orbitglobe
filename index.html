@@ -297,8 +297,15 @@ function controlLock(isLockedNow) {
   // 1. [최종 수정] USB 시리얼 연결 함수
   async function connectSerial() {
     try {
-      port = await navigator.serial.requestPort();
-      await port.open({ baudRate: 115200 });
+      // [수정 포인트] CH340의 Vendor ID(0x1A86)를 필터로 걸어줍니다.
+    // 이제 목록에는 Orbit Globe(CH340)만 나타납니다.
+    port = await navigator.serial.requestPort({
+      filters: [
+        { usbVendorId: 0x1A86 } // CH340 칩셋 전용
+      ]
+    });
+
+    await port.open({ baudRate: 115200 });
       
       // 1. 일단 잠금 상태로 설정
       controlLock(true);
