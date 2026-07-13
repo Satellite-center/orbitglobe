@@ -257,6 +257,9 @@ input, button, .slider {
   let isCustomImageUploaded = false; // 커스텀 이미지 업로드 여부 저장
   let customImageUrl = "";           // 업로드된 이미지 데이터 저장
 
+let lastCompletedTarget = null;
+let pendingTarget = null;
+
   // --- [신규 추가] 시스템 잠금 및 해제 함수 ---
 function controlLock(isLockedNow) {
   isLocked = isLockedNow; // 전역 변수 상태 업데이트
@@ -396,11 +399,25 @@ if (data.msg) {
                     statusText.style.color = "#ff6b6b";
                   }
 
-                  // Ready 신호면 잠금 해제 후 종료
-                  if (data.msg === "Ready") {
-                    console.log(">>> 시스템 잠금 해제 (Ready 신호 수신)");
-                    controlLock(false);
-                  }
+                  // Ready 신호면 완료된 목표 위치를 저장하고 잠금 해제
+if (data.msg === "Ready") {
+  console.log(">>> 시스템 잠금 해제 (Ready 신호 수신)");
+
+  // 수동 제어로 이동이 정상 완료되었다면
+  // 방금 목표로 했던 좌표를 마지막 완료 좌표로 저장
+  if (pendingTarget !== null) {
+    lastCompletedTarget = { ...pendingTarget };
+    pendingTarget = null;
+
+    console.log(
+      "마지막 완료 위치 저장:",
+      lastCompletedTarget.lat,
+      lastCompletedTarget.lon
+    );
+  }
+
+  controlLock(false);
+}
                 }
 
                 // --- 2. 좌표 처리 ---
@@ -494,23 +511,54 @@ if (data.msg) {
   }
 }
 
- // 6. [수정] 함수 이름을 sendManualCommand로 변경!
-function sendManualCommand() { 
+ function sendManualCommand() {
   if (isLocked) return; // 이미 시스템이 바쁘면 클릭 무시
+
   isUserAdjusting = false;
-  let lat = document.getElementById('latSlider').value;
-  let lon = document.getElementById('lonSlider').value;
 
-  document.getElementById('targetName').innerText = "수동 조작 모드";
-  
-  document.getElementById('modeStatus').style.color = "#00d2ff";
-  
-  // 2. [핵심] 시스템 잠금 함수 호출! 
-  // 이 안에서 메시지도 "● [SYSTEM BUSY]..."로 바뀌고 버튼도 어두워집니다.
-  controlLock(true);
+  const lat = parseInt(
+    document.getElementById('latSlider').value,
+    10
+  );
 
-  // 진짜 데이터를 보내는 300번 줄의 sendToESP 함수를 호출함
-  sendToESP({mode: 1, tLat: parseInt(lat), tLon: parseInt(lon)});
+  const lon = parseInt(
+    document.getElementById('lonSlider').value,
+    10
+  );
+
+  const targetName = document.getElementById('targetName');
+  const statusText = document.getElementById('modeStatus');
+
+  targetName.innerText = "수동 조작 모드";
+
+  // 마지막으로 완료한 좌표와 지금 선택한 좌표가 같으면
+  // ESP로 명령을 보내지 않고 종료
+  if (
+    lastCompletedTarget !== null &&
+    lastCompletedTarget.lat === lat &&
+    lastCompletedTarget.lon === lon
+  ) {
+    statusText.innerText = "● 이미 설정된 위치입니다.";
+    statusText.style.color = "#00d2ff";
+    return;
+  }
+
+  // 새로운 위치로 이동
+  statusText.innerText = "● 목표 위치로 이동 중...";
+  statusText.style.color = "#00d2ff";
+
+  // Ready 수신 후 완료 위치로 저장할 임시 목표값
+  pendingTarget = {
+    lat: lat,
+    lon: lon
+  };
+
+  // ESP로 명령 전송
+  sendToESP({
+    mode: 1,
+    tLat: lat,
+    tLon: lon
+  });
 }
 
   // 7. [기존 함수 수정] 초기화
